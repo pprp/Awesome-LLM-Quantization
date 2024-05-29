@@ -25,10 +25,9 @@ This repository contains the following sections:
 
 | Title & Author & Link                                        | Introduction                                                 | Summary                                                      |
 | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| [GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers](https://arxiv.org/abs/2210.17323)  Elias Frantar, Saleh Ashkboos, Torsten Hoefler, Dan Alistarh; [Github](https://github.com/IST-DASLab/gptq) | ![image-20240529203728325](asset/image-20240529203728325.png) | This Paper is the first one to apply post-training quantization to GPT. GPTQ is a one-shot weight quantization method based on approximate second-order information(Hessian). The bitwidth is reduced to 3-4bits per weight. Extreme experiments on 2-bit and ternary quantization are also provided. |
-
-
-
+| [![Star](https://img.shields.io/github/stars/IST-DASLab/gptq.svg?style=social&label=Star)](https://github.com/IST-DASLab/gptq)[![Publish](https://img.shields.io/badge/Conference-ICLR22-blue)]()<br>[GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers](https://arxiv.org/abs/2210.17323) <br> Elias Frantar, Saleh Ashkboos, Torsten Hoefler, Dan Alistarh <br> [Github](https://github.com/IST-DASLab/gptq) | ![image-20240529203728325](asset/image-20240529203728325.png) | This Paper is the first one to apply post-training quantization to GPT. GPTQ is a one-shot weight quantization method based on approximate second-order information(Hessian). The bit-width is reduced to 3-4 bits per weight. Extreme experiments on 2-bit and ternary quantization are also provided. |
+| [![Star](https://img.shields.io/github/stars/mit-han-lab/smoothquant.svg?style=social&label=Star)]()[![Publish](https://img.shields.io/badge/Conference-ICLR22-blue)]()<br>[SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models](https://arxiv.org/abs/2211.10438) <br> Guangxuan Xiao, Ji Lin, Mickael Seznec, Hao Wu, Julien Demouth, **Song Han** <br> [Github](https://github.com/mit-han-lab/smoothquant) | ![image-20240529204845286](asset/image-20240529204845286.png) | SmoothQuant is a post-training quantization framework targeting W8A8. In General, |
+|                                                              |                                                              |                                                              |
 
 
 
