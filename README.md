@@ -38,6 +38,80 @@ This repository contains the following sections:
 | NeurIPS2024 <br /> [Outliers and Calibration Sets have Dimishing Effect on Quantization of Mordern LLMs](https://arxiv.org/abs/2405.20835v1)<br /> Davide Paglieri, Saurabh Dash, Tim Rocktaschel, Jack Parker-Holder | ![image-20240604110208446](asset/image-20240604110208446.png) | This paper evaluates the effects of calibration set on the performance of LLM quantization, especially on hidden activations. Calibration set can distort the quantization range and negatively impact performance. This paper reveals that different model has shown different tendency towards quantization. (1) OPT has shown high susceptibility to outliers with varying calibration sets. (2) Newer models like Llama-2-7B, Llama-3-8B, Mistral-7B has demonstrated stronger robustness. This findings suggest a shift in PTQ strategies. These findings indicate that we should emphasis more on optimizing inference speed rather than focusing on outlier preservation. <br />#Analysis #Evaluation #Finding |
 | Arxiv24<br /> [Effective Interplay between Sparsity and Quantization: From Theory to Practice]()<br /> Simla Burcu Harma Ayan Chakraborty, Elizaveta Kostenok, Dnila Mishin, etc. <br /> [Github](https://github.com/parsa-epfl/quantization-sparsity-interplay) | ![image-20240604125632861](asset/image-20240604125632861.png) | This paper dives into the interplay between sparsity and quantization and evaluates whether thheir combination impacts final performance of LLMs. This paper theriotically proves that applying sparsity before quantization is the optimal sequence, minimizing the error in computation. The experiments involves OPT, LLaMA and ViT. Findings: (1) sparsity and quantization are not orthogonal; (2) interaction between Sparsity and quantization significantly harm the performance, where quantization error is playing a dominant role in the degradation. <br />#Theory #Sparisty |
 | NeurIPS23<br /> [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314)<br /> Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, Luke Zettlemoyer <br /> [Github](https://github.com/artidoro/qlora) | ![image-20240604191811055](asset/image-20240604191811055.png) | QLoRA aims to reduce the memory usage of LLM by incoorporating the LoRA with 4-bit quantized pretrained model. Specifically, QLoRA introduces (1) 4-bit NormalFlot(NF4), a information theoretically optimal for  normally distributed weights. (2) double quantization to reduce the memory footprint. (3) paged optimizers to manage memory spikes. <br />#NF4 #4-bit #LoRA |
+| NeurIPS23<br />[QuIP: 2-Bit Quantization of Large Language Models with Guarantees](https://proceedings.neurips.cc/paper_files/paper/2023/file/0df38cd13520747e1e64e5b123a78ef8-Paper-Conference.pdf) <br />Jerry Chee, Yaohui Cai, Volodymyr Kuleshov, Christopher De Sa <br /> [Github](https://github.com/Cornell-RelaxML/QuIP) |                                                              | This paper introduces Quantization with Incoherence Processing (QuIP), which is based on the insight that quantization benefits from incoherent weight and Hessian matrices. It consists of two steps (1) adaptive rounding procedure to minimize a quadratic proxy objective. (2) pre- and post-processing that ensures weight and Hessian incoherence using random orthgonal matrices. QuIP makes the two-bit LLM compression viable for the first time. <br />#PTQ #2-bit #Rotation |
+
+
+
+## Perplexity Evaluation
+
+**LLaMA 1 - FP16 - Baseline (Perplexity on Wikitext2**
+
+| Model          | Quantization Technique | 1-7B | 1-13B | 1-30B | 1-65B | 2-7B | 2-13B | 2-70B |
+| :------------- | :--------------------- | :--- | :---- | :---- | :---- | :--- | :---- | :---- |
+| LLaMA 1 - FP16 | -                      | 5.68 | 5.09  | 4.10  | 3.53  | 5.47 | 4.88  | 3.31  |
+
+**LLaMA 2 - W2A16**
+
+| Quantization Technique               | 1-7B      | 1-13B     | 1-30B    | 1-65B    | 2-7B      | 2-13B     | 2-70B    |
+| :----------------------------------- | :-------- | :-------- | :------- | :------- | :-------- | :-------- | :------- |
+| Round-to-Nearest                     | 1.1e5     | 6.8e4     | 2.4e4    | 2.2e4    | 3.8e4     | 5.6e4     | 2.0e4    |
+| Generative Pre-Training Quantization | 2.1e3     | 5.5e3     | 499.75   | 55.91    | 7.7e3     | 2.1e3     | 77.95    |
+| **OmniQuant**                        | **15.47** | **13.21** | **8.71** | **7.58** | **37.37** | **17.21** | **7.81** |
+
+**LLaMA 2 - W2A16 g128**
+
+| Quantization Technique               | 1-7B     | 1-13B    | 1-30B    | 1-65B    | 2-7B      | 2-13B    | 2-70B    |
+| :----------------------------------- | :------- | :------- | :------- | :------- | :-------- | :------- | :------- |
+| Round-to-Nearest                     | 1.9e3    | 781.20   | 68.04    | 15.08    | 4.2e3     | 122.08   | 27.27    |
+| Generative Pre-Training Quantization | 44.01    | 15.60    | 10.92    | 9.51     | 36.77     | 28.14    | NAN      |
+| AWQ                                  | 2.6e5    | 2.8e5    | 2.4e5    | 7.4e4    | 2.2e5     | 1.2e5    | -        |
+| **OmniQuant**                        | **9.72** | **7.93** | **7.12** | **5.95** | **11.06** | **8.26** | **6.55** |
+
+**LLaMA 2 - W2A16 g64**
+
+| Quantization Technique               | 1-7B     | 1-13B    | 1-30B    | 1-65B    | 2-7B     | 2-13B    | 2-70B    |
+| :----------------------------------- | :------- | :------- | :------- | :------- | :------- | :------- | :------- |
+| Round-to-Nearest                     | 188.32   | 101.87   | 19.20    | 9.39     | 431.97   | 26.22    | 10.31    |
+| Generative Pre-Training Quantization | 22.10    | 10.06    | 8.54     | 8.31     | 20.85    | 22.44    | NAN      |
+| AWQ                                  | 2.5e5    | 2.7e5    | 2.3e5    | 7.4e4    | 2.1e5    | 1.2e5    | -        |
+| **OmniQuant**                        | **8.90** | **7.34** | **6.59** | **5.65** | **9.62** | **7.56** | **6.11** |
+
+**LLaMA 2 - W3A16**
+
+| Quantization Technique               | 1-7B     | 1-13B    | 1-30B    | 1-65B    | 2-7B     | 2-13B    | 2-70B    |
+| :----------------------------------- | :------- | :------- | :------- | :------- | :------- | :------- | :------- |
+| Round-to-Nearest                     | 25.73    | 11.39    | 14.95    | 10.68    | 539.48   | 10.68    | 7.52     |
+| Generative Pre-Training Quantization | 8.06     | 6.76     | 5.84     | 5.06     | 8.37     | 6.44     | 4.82     |
+| AWQ                                  | 11.88    | 7.45     | 10.07    | 5.21     | 24.00    | 10.45    | -        |
+| **OmniQuant**                        | **6.49** | **5.68** | **4.74** | **4.04** | **6.58** | **5.58** | **3.92** |
+
+**LLaMA 2 - W3A16 g128**
+
+| Quantization Technique               | 1-7B     | 1-13B    | 1-30B    | 1-65B    | 2-7B     | 2-13B    | 2-70B    |
+| :----------------------------------- | :------- | :------- | :------- | :------- | :------- | :------- | :------- |
+| Round-to-Nearest                     | 7.01     | 5.88     | 4.87     | 4.24     | 6.66     | 5.51     | 3.97     |
+| Generative Pre-Training Quantization | 6.55     | 5.62     | 4.80     | 4.17     | 6.29     | 5.42     | 3.85     |
+| AWQ                                  | 6.46     | 5.51     | 4.63     | 3.99     | 6.24     | 5.32     | -        |
+| **OmniQuant**                        | **6.15** | **5.44** | **4.56** | **3.94** | **6.03** | **5.28** | **3.78** |
+
+**LLaMA 2 - W4A16**
+
+| Quantization Technique               | 1-7B     | 1-13B    | 1-30B    | 1-65B    | 2-7B     | 2-13B    | 2-70B    |
+| :----------------------------------- | :------- | :------- | :------- | :------- | :------- | :------- | :------- |
+| Round-to-Nearest                     | 6.43     | 5.55     | 4.57     | 3.87     | 6.11     | 5.20     | 3.67     |
+| Generative Pre-Training Quantization | 6.13     | 5.40     | 4.48     | 3.83     | 5.83     | 5.13     | 3.58     |
+| AWQ                                  | 6.08     | 5.34     | 4.39     | 3.76     | 6.15     | 5.12     | -        |
+| **OmniQuant**                        | **5.86** | **5.21** | **4.25** | **3.71** | **5.74** | **5.02** | **3.47** |
+
+**LLaMA 2 - W4A16 g128**
+
+| Quantization Technique               | 1-7B     | 1-13B    | 1-30B    | 1-65B    | 2-7B     | 2-13B    | 2-70B    |
+| :----------------------------------- | :------- | :------- | :------- | :------- | :------- | :------- | :------- |
+| Round-to-Nearest                     | 5.96     | 5.25     | 4.23     | 3.67     | 5.72     | 4.98     | 3.46     |
+| Generative Pre-Training Quantization | 5.85     | 5.20     | 4.23     | 3.65     | 5.61     | 4.98     | 3.42     |
+| AWQ                                  | 5.81     | 5.20     | 4.21     | 3.62     | 5.62     | 4.97     | -        |
+| **OmniQuant**                        | **5.77** | **5.17** | **4.19** | **3.62** | **5.58** | **4.95** | **3.40** |
+
 
 
 ## Contributing
