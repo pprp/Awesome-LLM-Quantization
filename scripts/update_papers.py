@@ -410,7 +410,7 @@ def main():
         
     # Fetch recent papers
     logger.info("Fetching recent papers from arXiv...")
-    papers = fetcher.fetch_recent_papers(days_back=1)
+    papers = fetcher.fetch_recent_papers(days_back=30)
     
     if not papers:
         logger.info("No new papers found from arXiv - exiting without changes")
