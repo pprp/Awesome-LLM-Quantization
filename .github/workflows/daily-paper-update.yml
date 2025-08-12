@@ -76,9 +76,8 @@ jobs:
           git push origin "$BRANCH_NAME"
           
           # Create PR using GitHub CLI
-          gh pr create \
-            --title "📄 New Paper: $PAPER_TITLE" \
-            --body "## 🔍 New LLM Quantization Paper
+          PR_TITLE="📄 New Paper: $PAPER_TITLE"
+          PR_BODY="## 🔍 New LLM Quantization Paper
 
 **Paper Title:** $PAPER_TITLE
 
@@ -92,7 +91,11 @@ This PR adds a newly discovered paper from arXiv related to LLM quantization.
 **Search Date:** $(date +'%Y-%m-%d')
 
 🤖 Generated automatically by GitHub Actions
-**Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+**Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          gh pr create \
+            --title "$PR_TITLE" \
+            --body "$PR_BODY" \
             --head "$BRANCH_NAME" \
             --base main
           
