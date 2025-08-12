@@ -77,22 +77,7 @@ jobs:
           
           # Create PR using GitHub CLI
           PR_TITLE="📄 New Paper: $PAPER_TITLE"
-          PR_BODY="## 🔍 New LLM Quantization Paper
-
-**Paper Title:** $PAPER_TITLE
-
-This PR adds a newly discovered paper from arXiv related to LLM quantization.
-
-**Changes:**
-- Added paper entry to README.md
-- Includes AI-generated summary and categorization
-
-**Commit:** $commit
-**Search Date:** $(date +'%Y-%m-%d')
-
-🤖 Generated automatically by GitHub Actions
-**Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          
+          PR_BODY="## 🔍 New LLM Quantization Paper \n\n **Paper Title:** $PAPER_TITLE \n\n 🤖 Generated automatically by GitHub Actions\n\n\n\n **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           gh pr create \
             --title "$PR_TITLE" \
             --body "$PR_BODY" \
