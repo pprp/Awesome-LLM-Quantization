@@ -303,6 +303,7 @@ class ReadmeUpdater:
     def update_papers_table(self, content: str, new_papers: List[Dict], summaries: List[str]) -> str:
         """Update the papers table with new entries"""
         if not new_papers:
+            logger.info("No new papers to add")
             return content
             
         # Find the papers table
@@ -323,9 +324,35 @@ class ReadmeUpdater:
             logger.error("Could not find end of separator line")
             return content
             
+        # Check for duplicate papers (basic check by arXiv ID)
+        existing_arxiv_ids = []
+        for line in content.split('\n'):
+            if 'arxiv.org/abs/' in line:
+                # Extract arXiv ID from line
+                import re
+                match = re.search(r'arxiv\.org/abs/(\d+\.\d+)', line)
+                if match:
+                    existing_arxiv_ids.append(match.group(1))
+        
+        # Filter out papers that already exist
+        new_unique_papers = []
+        new_unique_summaries = []
+        for paper, summary in zip(new_papers, summaries):
+            if paper['id'] not in existing_arxiv_ids:
+                new_unique_papers.append(paper)
+                new_unique_summaries.append(summary)
+            else:
+                logger.info(f"Skipping duplicate paper: {paper['title']}")
+        
+        if not new_unique_papers:
+            logger.info("All papers already exist in README")
+            return content
+            
+        logger.info(f"Adding {len(new_unique_papers)} new unique papers")
+            
         # Insert new papers at the beginning of the table (after header)
         new_entries = []
-        for paper, summary in zip(new_papers, summaries):
+        for paper, summary in zip(new_unique_papers, new_unique_summaries):
             entry = self.format_paper_entry(paper, summary)
             new_entries.append(entry)
             
@@ -356,35 +383,54 @@ def main():
     papers = fetcher.fetch_recent_papers(days_back=1)
     
     if not papers:
-        logger.info("No new papers found")
+        logger.info("No new papers found - exiting without changes")
         sys.exit(0)
         
     logger.info(f"Processing {len(papers)} papers...")
     
-    # Summarize papers
-    summaries = []
+    # Process each paper separately and create individual commits
+    total_added = 0
+    
     for i, paper in enumerate(papers):
-        logger.info(f"Summarizing paper {i+1}/{len(papers)}: {paper['title']}")
-        summary = summarizer.summarize_paper(paper)
-        summaries.append(summary)
+        logger.info(f"Processing paper {i+1}/{len(papers)}: {paper['title']}")
         
+        # Summarize the paper
+        summary = summarizer.summarize_paper(paper)
+        
+        # Load current README
+        readme_content = updater.load_readme()
+        if not readme_content:
+            logger.error("Failed to load README.md")
+            continue
+            
+        # Update with single paper
+        updated_content = updater.update_papers_table(readme_content, [paper], [summary])
+        
+        # Check if content actually changed (paper wasn't duplicate)
+        if len(updated_content) != len(readme_content):
+            # Save the updated README
+            if updater.save_readme(updated_content):
+                logger.info(f"Successfully added paper: {paper['title']}")
+                total_added += 1
+                
+                # Create individual commit for this paper
+                os.system(f'git add README.md')
+                commit_message = f'Add paper: {paper["title"][:60]}{"..." if len(paper["title"]) > 60 else ""}'
+                os.system(f'git commit -m "{commit_message}"')
+                
+            else:
+                logger.error(f"Failed to save README.md for paper: {paper['title']}")
+        else:
+            logger.info(f"Paper already exists, skipped: {paper['title']}")
+            
         # Add delay to avoid rate limiting
         time.sleep(1)
         
-    # Update README
-    logger.info("Updating README.md...")
-    readme_content = updater.load_readme()
-    if not readme_content:
-        logger.error("Failed to load README.md")
-        sys.exit(1)
-        
-    updated_content = updater.update_papers_table(readme_content, papers, summaries)
-    
-    if updater.save_readme(updated_content):
-        logger.info(f"Successfully updated README.md with {len(papers)} new papers")
+    if total_added > 0:
+        logger.info(f"Successfully processed {total_added} new papers with individual commits")
+        logger.info("Git commits created - workflow should detect changes")
     else:
-        logger.error("Failed to save updated README.md")
-        sys.exit(1)
+        logger.info("No new papers were added")
         
     logger.info("Paper update completed successfully")
 

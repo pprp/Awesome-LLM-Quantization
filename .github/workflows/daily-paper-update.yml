@@ -38,45 +38,74 @@ jobs:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       run: python scripts/update_papers.py
       
-    - name: Check for changes
+    - name: Check for changes and create individual PRs
       id: verify-changed-files
       run: |
-        if [ -n "$(git status --porcelain)" ]; then
-          echo "changed=true" >> $GITHUB_OUTPUT
-        else
-          echo "changed=false" >> $GITHUB_OUTPUT
-        fi
-      
-    - name: Create Pull Request
-      if: steps.verify-changed-files.outputs.changed == 'true'
-      uses: peter-evans/create-pull-request@v5
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        commit-message: "🤖 Add new LLM quantization papers from arXiv"
-        title: "📚 Daily ArXiv Paper Update - ${{ github.run_id }}"
-        body: |
-          ## 🔍 New LLM Quantization Papers
-          
-          This PR adds newly discovered papers from arXiv related to LLM quantization.
-          
-          **Search criteria:**
-          - Keywords: quantization, large language model, LLM, compression, low-bit
-          - Source: arXiv daily submissions
-          - Date: Last 24 hours
-          
-          **Changes:**
-          - Updated README.md with new paper entries
-          - Each paper includes AI-generated summary and categorization
-          
-          Please review the summaries and merge if appropriate.
-          
-          ---
-          🤖 Generated automatically by GitHub Actions
-          
-          **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        branch: "arxiv-update-${{ github.run_id }}"
-        delete-branch: true
+        echo "Checking for new commits..."
         
+        # Get list of new commits (commits not in origin/main)
+        git fetch origin main
+        NEW_COMMITS=$(git rev-list HEAD ^origin/main --reverse)
+        
+        if [ -z "$NEW_COMMITS" ]; then
+          echo "No new commits found."
+          echo "changed=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        echo "Found new commits, creating individual PRs..."
+        echo "changed=true" >> $GITHUB_OUTPUT
+        
+        # Create PR for each commit
+        COMMIT_COUNT=0
+        for commit in $NEW_COMMITS; do
+          COMMIT_COUNT=$((COMMIT_COUNT + 1))
+          
+          # Get commit details
+          COMMIT_MESSAGE=$(git log --format=%s -n 1 $commit)
+          COMMIT_BODY=$(git log --format=%b -n 1 $commit)
+          
+          # Extract paper title from commit message
+          PAPER_TITLE=$(echo "$COMMIT_MESSAGE" | sed 's/Add paper: //')
+          
+          # Create a unique branch for this commit
+          BRANCH_NAME="paper-${{ github.run_id }}-${COMMIT_COUNT}"
+          
+          # Create branch from this specific commit  
+          git checkout -b "$BRANCH_NAME" $commit
+          git push origin "$BRANCH_NAME"
+          
+          # Create PR using GitHub CLI
+          gh pr create \
+            --title "📄 New Paper: $PAPER_TITLE" \
+            --body "## 🔍 New LLM Quantization Paper
+
+**Paper Title:** $PAPER_TITLE
+
+This PR adds a newly discovered paper from arXiv related to LLM quantization.
+
+**Changes:**
+- Added paper entry to README.md
+- Includes AI-generated summary and categorization
+
+**Commit:** $commit
+**Search Date:** $(date +'%Y-%m-%d')
+
+🤖 Generated automatically by GitHub Actions
+**Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --head "$BRANCH_NAME" \
+            --base main
+          
+          echo "Created PR for: $PAPER_TITLE"
+          
+          # Return to main branch for next iteration
+          git checkout main
+        done
+        
+        echo "Created $COMMIT_COUNT individual PRs"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
     - name: No changes found
       if: steps.verify-changed-files.outputs.changed == 'false'
       run: |
