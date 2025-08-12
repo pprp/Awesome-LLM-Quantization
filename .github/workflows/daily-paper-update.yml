@@ -1,0 +1,60 @@
+name: Daily ArXiv Paper Update
+
+on:
+  schedule:
+    # Run daily at 9:00 AM UTC (you can adjust this time)
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  update-papers:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        pip install requests feedparser python-dateutil openai anthropic
+        
+    - name: Run paper update script
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      run: python scripts/update_papers.py
+      
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "🤖 Add new LLM quantization papers from arXiv"
+        title: "📚 Daily ArXiv Paper Update - $(date +'%Y-%m-%d')"
+        body: |
+          ## 🔍 New LLM Quantization Papers
+          
+          This PR adds newly discovered papers from arXiv related to LLM quantization.
+          
+          **Search criteria:**
+          - Keywords: quantization, large language model, LLM, compression, low-bit
+          - Source: arXiv daily submissions
+          - Date: Last 24 hours
+          
+          **Changes:**
+          - Updated README.md with new paper entries
+          - Each paper includes AI-generated summary and categorization
+          
+          Please review the summaries and merge if appropriate.
+          
+          ---
+          🤖 Generated automatically by GitHub Actions
+        branch: arxiv-update-$(date +'%Y-%m-%d')
+        delete-branch: true

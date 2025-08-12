@@ -1,2 +1,24 @@
 *.pyc
 .DS_Store
+
+# Development and testing files
+.dev-tools/
+test_*.py
+debug_*.py
+
+# Python cache
+__pycache__/
+*.pyo
+
+# Environment files
+.env
+*.env
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
