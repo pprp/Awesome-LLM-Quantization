@@ -11,7 +11,7 @@ import json
 import time
 import logging
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 import requests
 import feedparser
 from dateutil.parser import parse as parse_date
@@ -19,6 +19,69 @@ from dateutil.parser import parse as parse_date
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+class ArXivTracker:
+    """Handles tracking of processed arXiv papers to avoid duplicates"""
+    
+    def __init__(self, tracking_file: str = "scripts/processed_papers.json"):
+        self.tracking_file = tracking_file
+        self.processed_ids: Set[str] = set()
+        self.load_processed_ids()
+        
+    def load_processed_ids(self):
+        """Load previously processed arXiv IDs from JSON file"""
+        try:
+            if os.path.exists(self.tracking_file):
+                with open(self.tracking_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.processed_ids = set(data.get('processed_arxiv_ids', []))
+                    logger.info(f"Loaded {len(self.processed_ids)} previously processed arXiv IDs")
+            else:
+                logger.info("No tracking file found, starting fresh")
+        except Exception as e:
+            logger.error(f"Error loading tracking file: {e}")
+            
+    def save_processed_ids(self):
+        """Save processed arXiv IDs to JSON file"""
+        try:
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(self.tracking_file), exist_ok=True)
+            
+            # Prepare data structure
+            data = {
+                "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "total_papers": len(self.processed_ids),
+                "processed_arxiv_ids": sorted(list(self.processed_ids))
+            }
+            
+            with open(self.tracking_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+                
+            logger.info(f"Updated tracking file with {len(self.processed_ids)} arXiv IDs")
+            
+        except Exception as e:
+            logger.error(f"Error saving tracking file: {e}")
+            
+    def is_processed(self, arxiv_id: str) -> bool:
+        """Check if an arXiv paper has already been processed"""
+        return arxiv_id in self.processed_ids
+        
+    def add_processed(self, arxiv_id: str):
+        """Add an arXiv ID to the processed list"""
+        self.processed_ids.add(arxiv_id)
+        
+    def filter_new_papers(self, papers: List[Dict]) -> List[Dict]:
+        """Filter out papers that have already been processed"""
+        new_papers = []
+        
+        for paper in papers:
+            if not self.is_processed(paper['id']):
+                new_papers.append(paper)
+            else:
+                logger.info(f"Skipping already processed paper: {paper['title']}")
+                
+        logger.info(f"Filtered {len(papers)} papers -> {len(new_papers)} new papers")
+        return new_papers
 
 class ArXivPaperFetcher:
     """Handles fetching papers from arXiv API"""
@@ -37,43 +100,25 @@ class ArXivPaperFetcher:
         ]
         
     def build_query(self, days_back: int = 1) -> str:
-        """Build arXiv API query string - simplified and tested approach"""
+        """Build arXiv API query string - simplified and working approach"""
         
-        # Use multiple simple queries that we know work
+        # Start with simple, proven query patterns
         query_parts = [
-            # Direct phrase searches that work
-            'all:"LLM quantization"',
-            'all:"quantization of large language models"',
-            'all:"quantized language model"',
-            'all:"quantization for LLM"',
-            
-            # Title searches for specific methods
+            # Basic combinations that work reliably
+            'all:"quantization" AND all:"language model"',
+            'all:"quantized" AND all:"LLM"',
             'ti:"GPTQ"',
             'ti:"AWQ"', 
-            'ti:"SmoothQuant"',
             'ti:"BitNet"',
             'ti:"QLoRA"',
-            'ti:"OmniQuant"',
-            'ti:"QuIP"',
-            'ti:"AQLM"',
-            'ti:"BiLLM"',
-            
-            # Abstract + title combinations (simple)
-            '(ti:"quantization" AND abs:"large language model")',
-            '(ti:"quantized" AND abs:"LLM")',
-            '(ti:"4-bit" AND abs:"language model")',
-            '(ti:"8-bit" AND abs:"transformer")',
-            '(ti:"low-bit" AND abs:"LLM")',
-            '(abs:"post-training quantization" AND abs:"LLM")',
-            
-            # Category-based searches
-            '(cat:cs.CL AND ti:"quantization")',
-            '(cat:cs.LG AND ti:"quantization" AND abs:"language model")',
+            'abs:"post-training quantization"',
+            'cat:cs.CL AND ti:"quantization"'
         ]
         
         query = " OR ".join(query_parts)
         
-        logger.info(f"Built query with {len(query_parts)} parts")
+        logger.info(f"Built simplified query with {len(query_parts)} parts")
+        logger.info(f"Query: {query[:200]}...")  # Log first 200 chars for debugging
         return query
         
     def is_relevant_paper(self, paper: Dict) -> bool:
@@ -127,11 +172,17 @@ class ArXivPaperFetcher:
             response = requests.get(self.BASE_URL, params=params, timeout=30)
             response.raise_for_status()
             
+            logger.info(f"ArXiv API response status: {response.status_code}")
+            logger.info(f"Response content length: {len(response.content)} bytes")
+            
             # Parse the Atom feed
             feed = feedparser.parse(response.content)
             
+            logger.info(f"Feed parsed. Total entries: {len(feed.entries)}")
+            
             papers = []
             cutoff_date = datetime.now() - timedelta(days=days_back)
+            logger.info(f"Looking for papers newer than: {cutoff_date}")
             
             for entry in feed.entries:
                 # Parse submission date
@@ -152,6 +203,8 @@ class ArXivPaperFetcher:
                     # Apply relevance filter
                     if self.is_relevant_paper(paper):
                         papers.append(paper)
+                        logger.info(f"Added relevant paper: {paper['title']}")
+                    
                     
             logger.info(f"Found {len(papers)} recent papers")
             return papers
@@ -324,35 +377,11 @@ class ReadmeUpdater:
             logger.error("Could not find end of separator line")
             return content
             
-        # Check for duplicate papers (basic check by arXiv ID)
-        existing_arxiv_ids = []
-        for line in content.split('\n'):
-            if 'arxiv.org/abs/' in line:
-                # Extract arXiv ID from line
-                import re
-                match = re.search(r'arxiv\.org/abs/(\d+\.\d+)', line)
-                if match:
-                    existing_arxiv_ids.append(match.group(1))
-        
-        # Filter out papers that already exist
-        new_unique_papers = []
-        new_unique_summaries = []
-        for paper, summary in zip(new_papers, summaries):
-            if paper['id'] not in existing_arxiv_ids:
-                new_unique_papers.append(paper)
-                new_unique_summaries.append(summary)
-            else:
-                logger.info(f"Skipping duplicate paper: {paper['title']}")
-        
-        if not new_unique_papers:
-            logger.info("All papers already exist in README")
-            return content
-            
-        logger.info(f"Adding {len(new_unique_papers)} new unique papers")
+        logger.info(f"Adding {len(new_papers)} new papers to README")
             
         # Insert new papers at the beginning of the table (after header)
         new_entries = []
-        for paper, summary in zip(new_unique_papers, new_unique_summaries):
+        for paper, summary in zip(new_papers, summaries):
             entry = self.format_paper_entry(paper, summary)
             new_entries.append(entry)
             
@@ -369,6 +398,7 @@ def main():
     logger.info("Starting daily arXiv paper update")
     
     # Initialize components
+    tracker = ArXivTracker()
     fetcher = ArXivPaperFetcher()
     summarizer = PaperSummarizer()
     updater = ReadmeUpdater()
@@ -383,16 +413,23 @@ def main():
     papers = fetcher.fetch_recent_papers(days_back=1)
     
     if not papers:
-        logger.info("No new papers found - exiting without changes")
+        logger.info("No new papers found from arXiv - exiting without changes")
         sys.exit(0)
         
-    logger.info(f"Processing {len(papers)} papers...")
+    # Filter out papers we've already processed
+    new_papers = tracker.filter_new_papers(papers)
+    
+    if not new_papers:
+        logger.info("No new unprocessed papers found - exiting without changes")
+        sys.exit(0)
+        
+    logger.info(f"Processing {len(new_papers)} new papers...")
     
     # Process each paper separately and create individual commits
     total_added = 0
     
-    for i, paper in enumerate(papers):
-        logger.info(f"Processing paper {i+1}/{len(papers)}: {paper['title']}")
+    for i, paper in enumerate(new_papers):
+        logger.info(f"Processing paper {i+1}/{len(new_papers)}: {paper['title']}")
         
         # Summarize the paper
         summary = summarizer.summarize_paper(paper)
@@ -406,12 +443,15 @@ def main():
         # Update with single paper
         updated_content = updater.update_papers_table(readme_content, [paper], [summary])
         
-        # Check if content actually changed (paper wasn't duplicate)
+        # Check if content actually changed
         if len(updated_content) != len(readme_content):
             # Save the updated README
             if updater.save_readme(updated_content):
                 logger.info(f"Successfully added paper: {paper['title']}")
                 total_added += 1
+                
+                # Mark paper as processed
+                tracker.add_processed(paper['id'])
                 
                 # Create individual commit for this paper
                 os.system(f'git add README.md')
@@ -421,12 +461,14 @@ def main():
             else:
                 logger.error(f"Failed to save README.md for paper: {paper['title']}")
         else:
-            logger.info(f"Paper already exists, skipped: {paper['title']}")
+            logger.info(f"Paper content didn't change README, skipped: {paper['title']}")
             
         # Add delay to avoid rate limiting
         time.sleep(1)
-        
+    
+    # Save the updated tracking file
     if total_added > 0:
+        tracker.save_processed_ids()
         logger.info(f"Successfully processed {total_added} new papers with individual commits")
         logger.info("Git commits created - workflow should detect changes")
     else:
