@@ -365,30 +365,29 @@ class ReadmeUpdater:
             logger.error("Could not find papers table in README")
             return content
             
-        # Find the end of the table header (after the separator line)
-        header_end = content.find("| ---", table_start)
-        if header_end == -1:
-            logger.error("Could not find table header separator")
-            return content
+        # Find the end of the table by looking for the next section or end of file
+        # Look for the next markdown header (starting with #) after the table
+        next_section = content.find("\n#", table_start)
+        if next_section == -1:
+            # If no next section found, append at the end of content
+            table_end = len(content)
+        else:
+            # Find the last table row before the next section
+            table_end = next_section
             
-        # Find the end of the separator line
-        separator_end = content.find("\n", header_end)
-        if separator_end == -1:
-            logger.error("Could not find end of separator line")
-            return content
+        logger.info(f"Adding {len(new_papers)} new papers to README at the end of table")
             
-        logger.info(f"Adding {len(new_papers)} new papers to README")
-            
-        # Insert new papers at the beginning of the table (after header)
+        # Insert new papers at the end of the table
         new_entries = []
         for paper, summary in zip(new_papers, summaries):
             entry = self.format_paper_entry(paper, summary)
             new_entries.append(entry)
             
+        # Insert new entries at the end of the table
         new_content = (
-            content[:separator_end + 1] + 
+            content[:table_end] + 
             '\n'.join(new_entries) + '\n' +
-            content[separator_end + 1:]
+            content[table_end:]
         )
         
         return new_content
@@ -408,19 +407,29 @@ def main():
         logger.error("No LLM API keys found. Please set OPENAI_API_KEY or ANTHROPIC_API_KEY")
         sys.exit(1)
         
-    # Fetch recent papers
-    logger.info("Fetching recent papers from arXiv...")
-    papers = fetcher.fetch_recent_papers(days_back=30)
+    # Try multiple day ranges to find new papers
+    day_ranges = [30, 60, 80]
+    new_papers = []
     
-    if not papers:
-        logger.info("No new papers found from arXiv - exiting without changes")
-        sys.exit(0)
+    for days_back in day_ranges:
+        logger.info(f"Fetching recent papers from arXiv (last {days_back} days)...")
+        papers = fetcher.fetch_recent_papers(days_back=days_back)
         
-    # Filter out papers we've already processed
-    new_papers = tracker.filter_new_papers(papers)
+        if not papers:
+            logger.info(f"No papers found from arXiv in last {days_back} days")
+            continue
+            
+        # Filter out papers we've already processed
+        new_papers = tracker.filter_new_papers(papers)
+        
+        if new_papers:
+            logger.info(f"Found {len(new_papers)} new unprocessed papers in last {days_back} days")
+            break
+        else:
+            logger.info(f"No new unprocessed papers found in last {days_back} days")
     
     if not new_papers:
-        logger.info("No new unprocessed papers found - exiting without changes")
+        logger.info("No new unprocessed papers found after trying all day ranges - exiting without changes")
         sys.exit(0)
         
     logger.info(f"Processing {len(new_papers)} new papers...")
