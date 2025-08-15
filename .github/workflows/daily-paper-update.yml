@@ -6,6 +6,10 @@ on:
     - cron: '0 9 * * *'
   workflow_dispatch: # Allow manual triggering
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   update-papers:
     runs-on: ubuntu-latest
@@ -14,7 +18,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.PAT_TOKEN }}
         fetch-depth: 0
         
     - name: Set up Python
@@ -92,7 +96,7 @@ jobs:
         
         echo "Created $COMMIT_COUNT individual PRs"
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
       
     - name: No changes found
       if: steps.verify-changed-files.outputs.changed == 'false'
