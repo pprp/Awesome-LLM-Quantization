@@ -432,6 +432,12 @@ def main():
         logger.info("No new unprocessed papers found after trying all day ranges - exiting without changes")
         sys.exit(0)
         
+    # Limit to maximum 3 papers per day
+    MAX_PAPERS_PER_DAY = 3
+    if len(new_papers) > MAX_PAPERS_PER_DAY:
+        logger.info(f"Found {len(new_papers)} new papers, limiting to {MAX_PAPERS_PER_DAY} papers per day")
+        new_papers = new_papers[:MAX_PAPERS_PER_DAY]
+        
     logger.info(f"Processing {len(new_papers)} new papers...")
     
     # Process each paper separately and create individual commits
@@ -439,6 +445,9 @@ def main():
     
     for i, paper in enumerate(new_papers):
         logger.info(f"Processing paper {i+1}/{len(new_papers)}: {paper['title']}")
+        
+        # Mark paper as processed first to avoid reprocessing even if update fails
+        tracker.add_processed(paper['id'])
         
         # Summarize the paper
         summary = summarizer.summarize_paper(paper)
@@ -459,9 +468,6 @@ def main():
                 logger.info(f"Successfully added paper: {paper['title']}")
                 total_added += 1
                 
-                # Mark paper as processed
-                tracker.add_processed(paper['id'])
-                
                 # Create individual commit for this paper
                 os.system(f'git add README.md')
                 commit_message = f'Add paper: {paper["title"][:60]}{"..." if len(paper["title"]) > 60 else ""}'
@@ -475,9 +481,10 @@ def main():
         # Add delay to avoid rate limiting
         time.sleep(1)
     
-    # Save the updated tracking file
+    # Always save the tracking file regardless of whether papers were added to README
+    tracker.save_processed_ids()
+    
     if total_added > 0:
-        tracker.save_processed_ids()
         logger.info(f"Successfully processed {total_added} new papers with individual commits")
         logger.info("Git commits created - workflow should detect changes")
     else:
