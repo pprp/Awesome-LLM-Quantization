@@ -433,7 +433,7 @@ def main():
         sys.exit(0)
         
     # Limit to maximum 3 papers per day
-    MAX_PAPERS_PER_DAY = 3
+    MAX_PAPERS_PER_DAY = 1
     if len(new_papers) > MAX_PAPERS_PER_DAY:
         logger.info(f"Found {len(new_papers)} new papers, limiting to {MAX_PAPERS_PER_DAY} papers per day")
         new_papers = new_papers[:MAX_PAPERS_PER_DAY]
