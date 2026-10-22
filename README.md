@@ -108,6 +108,10 @@ Pinned by impact and citations: foundational methods such as GPTQ and AWQ are li
 | Preprint26 <br />[Small-State Coset Trellis Coding at IQ2_XXS Size: An Equal-Bytes Study in llama.cpp](https://doi.org/10.5281/zenodo.23481757) <br /> Harshit Goyal <br /> [Github](https://github.com/Genrius-AI/pingala8-llm) | 8-state trellis-coded 2-bit format in llama.cpp (Hadamard rotation + LDLQ rounding, CUDA patch). At IQ2_XXS file size: WikiText-2 perplexity 16.64 on Qwen3-4B (IQ2_XXS 28.61, IQ2_KT 18.15) and 8.44 on Llama-3.1-8B (IQ2_KT 9.36); loses to IQ2_KT on Qwen3-14B. <br />#PTQ #2-bit #Trellis #llama.cpp |
 | Arxiv2026 <br /> [EdgeRazor: A Lightweight Framework for Large Language Models via Mixed-Precision Quantization-Aware Distillation](https://arxiv.org/abs/2605.04062) <br /> Shu-Hao Zhang, Le-Tong Huang, Xiang-Sheng Deng, Xin-Yi Zou, Chen Wu, Nan Li, Shao-Qun Zhang, Zhi-Hua Zhou <br /> [Github](https://github.com/zhangsq-nju/EdgeRazor) [Model](https://huggingface.co/collections/zhangsq-nju/edgerazor-nbit) [Playground](https://huggingface.co/spaces/zhangsq-nju/EdgeRazor-PlayGround) | This paper proposes EdgeRazor, a lightweight framework that compresses LLMs into flexible low-bit formats, achieving state-of-the-art performance in the sub-4-bit regime to facilitate resilient edge deployment. It supports base, instruct, and multimodal LLMs. <br /> #LightweightLLM #QAD #MixedPrecision |
 
+## Benchmark evidence packs
+
+- [Bonfyre FPQ Qwen 0.5B benchmark evidence](https://github.com/Nickgonzales76017/bonfyre-fpq-benchmark) - Checksummed historical FPQ receipts for a 994-token Qwen2.5-0.5B slice, plus rerun instructions for FP32 and an open HQQ comparator on the full WikiText-2 test split. The historical FPQ v8 rerunner is currently unavailable; no full-split FPQ result or general advantage over HQQ is established. See the linked methodology and limitations.
+
 ## Perplexity Evaluation
 
 2-bit evaluation
