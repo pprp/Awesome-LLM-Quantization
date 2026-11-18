@@ -293,9 +293,9 @@ class PaperSummarizer:
             client = anthropic.Anthropic(api_key=self.anthropic_api_key)
             
             response = client.messages.create(
-                model="claude-3-haiku-20240307",
+                model="claude-haiku-4-5-20251001",
                 max_tokens=200,
-                temperature=0.3,
+                extra_body={"temperature": 0.3},
                 messages=[
                     {"role": "user", "content": prompt}
                 ]
